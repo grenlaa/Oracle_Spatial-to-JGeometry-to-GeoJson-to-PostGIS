@@ -20,7 +20,21 @@ public class converter_to_GeoJSON {
             !!!!!!!!!!!!!!!!!  
      */
     public static String convert(JGeometry JGeometry) throws Exception {
+        return convert(JGeometry, "base");
+    }
+
+    public static String convert(JGeometry JGeometry, String geom_type) throws Exception {
+
+        if (JGeometry == null) {
+            return null;
+        }
+
         int GEOMETRY_TYPE = JGeometry.getType();
+
+        if (!geom_type.equalsIgnoreCase("base")) {
+            GEOMETRY_TYPE = get_bgt(geom_type);
+        }
+
         String str = "";
         if (GEOMETRY_TYPE == 99) {
             return null;
@@ -28,26 +42,26 @@ public class converter_to_GeoJSON {
         if (GEOMETRY_TYPE == 0) {
         }
         if (GEOMETRY_TYPE == 1) {
-            str = "{ \"type\": \"Point\", \"coordinates\": " + elem_to_json(JGeometry) + " }";
+            str = "{ \"type\": \"Point\", \"coordinates\": " + elem_to_json(JGeometry, geom_type) + " }";
         }
         if (GEOMETRY_TYPE == 2) {
-            str = "{ \"type\": \"Linestring\", \"coordinates\":" + elem_to_json(JGeometry) + "}";
+            str = "{ \"type\": \"Linestring\", \"coordinates\":" + elem_to_json(JGeometry, geom_type) + "}";
         }
         if (GEOMETRY_TYPE == 3) {
-            str = "{ \"type\": \"Polygon\", \"coordinates\":" + elem_to_json(JGeometry) + "}";
+            str = "{ \"type\": \"Polygon\", \"coordinates\":" + elem_to_json(JGeometry, geom_type) + "}";
         }
         if (GEOMETRY_TYPE == 4) {
-            str = "{ \"type\": \"GeometryCollection\", \"geometries\":[" + elem_to_json(JGeometry) + "]}";
+            str = "{ \"type\": \"GeometryCollection\", \"geometries\":[" + elem_to_json(JGeometry, geom_type) + "]}";
         }
         if (GEOMETRY_TYPE == 5) {
-            str = "{ \"type\": \"MultiPoint\", \"coordinates\":[" + elem_to_json(JGeometry) + "]}";
+            str = "{ \"type\": \"MultiPoint\", \"coordinates\":[" + elem_to_json(JGeometry, geom_type) + "]}";
         }
         if (GEOMETRY_TYPE == 6) {
-            str = "{ \"type\": \"MultiLinestring\", \"coordinates\":[" + elem_to_json(JGeometry) + "]}";
+            str = "{ \"type\": \"MultiLinestring\", \"coordinates\":[" + elem_to_json(JGeometry, geom_type) + "]}";
         }
         if (GEOMETRY_TYPE == 7) {
 //            return null;
-            str = "{ \"type\": \"MultiPolygon\", \"coordinates\":[" + elem_to_json(JGeometry) + "]}";
+            str = "{ \"type\": \"MultiPolygon\", \"coordinates\":[" + elem_to_json(JGeometry, geom_type) + "]}";
         }
 //        if (GEOMETRY_TYPE == 8) {
 //        }
@@ -119,19 +133,23 @@ public class converter_to_GeoJSON {
 
     }
 
-    static private String elem_to_json(JGeometry JGeometry) throws Exception {
+    static private String elem_to_json(JGeometry JGeometry, String geom_type) throws Exception {
 
         String str = "";
         String str_elem = "";
         String str_elem_end = "";
 
         int element_collection = JGeometry.getType();
+        if (!geom_type.equalsIgnoreCase("base")) {
+            element_collection = get_bgt(geom_type);
+        }
 
         if (element_collection == 4) {
             str_elem_end = "}";
         }
 
-        int[] objs_type = JGeometry.getElemInfo();
+        int[] objs_type = get_eleminfo_revised(JGeometry.getElemInfo(), geom_type, JGeometry.getType());
+
         Object[] objs_ordinats = JGeometry.getOrdinatesOfElements();
 
         int y = 0;
@@ -257,6 +275,64 @@ public class converter_to_GeoJSON {
             str = str + "]";
         }
         return str;
+    }
+
+    private static int get_bgt(String geom_type) {
+
+        if (geom_type.equalsIgnoreCase("base")) {
+            return 0;
+        }
+        if (geom_type.equalsIgnoreCase("Linestring")) {
+            return 2;
+        }
+        if (geom_type.equalsIgnoreCase("Polygon")) {
+            return 3;
+        }
+        if (geom_type.equalsIgnoreCase("GeometryCollection")) {
+            return 4;
+        }
+        if (geom_type.equalsIgnoreCase("MultiPoint")) {
+            return 5;
+        }
+        if (geom_type.equalsIgnoreCase("MultiLinestring")) {
+            return 6;
+        }
+        if (geom_type.equalsIgnoreCase("MultiPolygon")) {
+            return 7;
+        }
+
+        return 99;
+    }
+
+    private static int[] get_eleminfo_revised(int[] objs_type, String geom_type, int jg_type) {
+
+        if (geom_type.equalsIgnoreCase("base")) {
+            return objs_type;
+        }
+
+        for (int i = 0; i < objs_type.length; i = i + 3) {
+            if (geom_type.equalsIgnoreCase("Linestring") && jg_type != 6 && jg_type != 2) {
+                objs_type[i + 1] = 2;
+                objs_type[i + 2] = 1;
+            }
+            if (geom_type.equalsIgnoreCase("Polygon") && jg_type != 7 && jg_type != 3) {
+                objs_type[i + 1] = 1003;
+                objs_type[i + 2] = 1;
+            }
+            if (geom_type.equalsIgnoreCase("MultiPoint") && jg_type != 5) {
+                objs_type[i + 1] = 1;
+                objs_type[i + 2] = 1;
+            }
+            if (geom_type.equalsIgnoreCase("MultiLinestring") && jg_type != 6 && jg_type != 2) {
+                objs_type[i + 1] = 2;
+                objs_type[i + 2] = 1;
+            }
+            if (geom_type.equalsIgnoreCase("MultiPolygon") && jg_type != 7 && jg_type != 3) {
+                objs_type[i + 1] = 1003;
+                objs_type[i + 2] = 1;
+            }
+        }
+        return objs_type;
     }
 
 }
